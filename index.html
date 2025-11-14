@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mechanical Engineering Assistant</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Changed primary color to a deeper, more 'technical' blue
+                        'primary-blue': '#1d4ed8', 
+                        'secondary-gray': '#f3f4f6',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a polished look */
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background-color: #9ca3af; /* Darker gray for scrollbar */
+            border-radius: 4px;
+        }
+        .user-bubble {
+            background-color: #3b82f6; /* Blue 500 */
+            color: white;
+            border-top-right-radius: 0.5rem;
+        }
+        .bot-bubble {
+            background-color: #e5e7eb; /* Gray 200 */
+            color: #1f2937;
+            border-top-left-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 font-sans">
+
+    <div class="w-full max-w-lg bg-white shadow-2xl rounded-xl flex flex-col h-[85vh]">
+
+        <!-- Header -->
+        <header class="p-4 bg-primary-blue text-white rounded-t-xl shadow-lg">
+            <h1 class="text-xl font-bold">ME Assistant ⚙️</h1>
+            <p class="text-sm opacity-90">Specialized in Mechanical Engineering Topics</p>
+        </header>
+
+        <!-- Chat History -->
+        <div id="chat-history" class="flex-grow p-4 space-y-4 overflow-y-auto">
+            <!-- Initial Bot Message -->
+            <div class="flex justify-start">
+                <div class="max-w-xs md:max-w-md p-3 rounded-xl bot-bubble shadow-md">
+                    <p>Hello! I'm your Mechanical Engineering Assistant. Try asking about **FEA**, **Fatigue Failure**, **Natural Frequency**, or the **Second Law of Thermodynamics**.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-200">
+            <div class="flex space-x-2">
+                <input type="text" id="user-input" placeholder="Ask an ME question (e.g., 'What is stress?')..."
+                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-blue text-gray-800">
+                <button id="send-btn"
+                        class="px-4 py-3 bg-primary-blue text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 active:scale-95 shadow-md"
+                        title="Send Message">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global elements
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // --- Core Chatbot Logic ---
+
+        // Simple Q&A data structure for Mechanical Engineering Topics
+        const responses = [
+            // Standard Interactions
+            { query: /hello|hi|hey/i, reply: "Hello! I'm your Mechanical Engineering Assistant. Ask me about stress, thermodynamics, or manufacturing!" },
+            { query: /how are you|how is it going/i, reply: "I'm running smoothly, thanks! Ready to answer your ME queries." },
+            { query: /thank you|thanks|cheers/i, reply: "You're welcome! Happy to assist with your engineering studies." },
+            { query: /bye|goodbye/i, reply: "Goodbye! May your designs be efficient and your motors run true." },
+            { query: /what can you do|your capabilities/i, reply: "I specialize in Mechanical Engineering topics. Try asking about the laws of thermodynamics, viscosity, or CNC machining." },
+            
+            // Core Topics (Original 11)
+            
+            // 1. Thermodynamics - First Law
+            { query: /first law of thermodynamics|law of thermodynamics/i, reply: "The **First Law of Thermodynamics**, also known as the Law of Energy Conservation, states that energy cannot be created or destroyed in an isolated system, only transferred or changed from one form to another." },
+            
+            // 2. Thermodynamics - Specific vs Latent Heat
+            { query: /specific heat|latent heat/i, reply: "**Specific heat** is the energy required to raise the temperature of a unit mass of a substance by one degree. **Latent heat** is the energy absorbed or released during a phase change (like boiling or freezing) without changing temperature." },
+            
+            // 3. Fluid Mechanics - Viscosity
+            { query: /what is viscosity|viscosity/i, reply: "**Viscosity** is a measure of a fluid's resistance to flow. It describes the internal friction of a moving fluid, where a low viscosity fluid (like water) flows easily, and a high viscosity fluid (like honey) resists flow." },
+            
+            // 4. Fluid Mechanics - Bernoulli
+            { query: /Bernoulli equation|bernoullis principle/i, reply: "The **Bernoulli Equation** relates the pressure, velocity, and elevation in a steady-flowing, non-viscous, incompressible fluid. Essentially, where the fluid velocity increases, the pressure decreases." },
+            
+            // 5. Design - Factor of Safety
+            { query: /factor of safety|what is fos/i, reply: "The **Factor of Safety (FOS)** is the ratio of the ultimate strength of a material to the required working stress. It ensures the design can withstand loads greater than the expected maximum load, providing a safety margin." },
+            
+            // 6. Design - Stress and Strain
+            { query: /stress and strain|what is stress/i, reply: "**Stress** is the internal force per unit area that components of a body exert on each other. **Strain** is the measure of the deformation of the material relative to its original size and shape under that stress." },
+            
+            // 7. Manufacturing - CNC
+            { query: /what is cnc machining|cnc/i, reply: "**CNC (Computer Numerical Control) machining** is a manufacturing process where computer software controls the movement and operation of factory tools and machinery, creating precise, complex parts from material blanks." },
+            
+            // 8. Manufacturing - Casting vs Forging
+            { query: /casting and forging|casting vs forging/i, reply: "**Casting** involves pouring molten material into a mold. **Forging** involves shaping solid metal through localized compressive forces. Forged parts generally have better strength and grain structure." },
+            
+            // 9. Materials - Yield Strength
+            { query: /yield strength|what is yield strength/i, reply: "**Yield strength** is the stress at which a material begins to plastically deform. Before this point, the material will return to its original shape; beyond it, the deformation is permanent." },
+            
+            // 10. General - Branches of ME
+            { query: /branches of mechanical engineering|fields of me/i, reply: "The main branches of Mechanical Engineering include **Thermodynamics**, **Fluid Mechanics**, **Design and Analysis** (Solid Mechanics), **Materials Science**, and **Manufacturing**." },
+            
+            // 11. Tool - Heat Exchanger
+            { query: /heat exchanger|what is a heat exchanger/i, reply: "A **heat exchanger** is a device used to transfer heat between two or more fluids (solids, liquids, or gases) at different temperatures, typically used in HVAC, power plants, and chemical processing." },
+
+            // --- NEW 10 TOPICS ADDED ---
+
+            // 12. Thermodynamics - Second Law (Entropy)
+            { query: /second law of thermodynamics|entropy/i, reply: "The **Second Law of Thermodynamics** states that the total entropy (disorder) of an isolated system can only increase over time. This law governs the direction of heat flow (hot to cold) and defines the limits of engine efficiency." },
+
+            // 13. Fluid Mechanics - Reynolds Number
+            { query: /reynolds number|what is reynolds number/i, reply: "The **Reynolds number (Re)** is a dimensionless quantity that predicts the flow patterns in fluid dynamics. It's the ratio of inertial forces to viscous forces and is used to determine if flow is laminar (low Re) or turbulent (high Re)." },
+
+            // 14. Design - Fatigue failure
+            { query: /fatigue failure|what is fatigue/i, reply: "**Fatigue failure** is the structural failure of a material caused by repeated or cyclic loading, even if the stresses are below the material's yield strength. It is often characterized by crack initiation and propagation." },
+
+            // 15. Manufacturing - 3D Printing
+            { query: /3d printing|additive manufacturing/i, reply: "**3D Printing** (Additive Manufacturing) is a process of making three-dimensional solid objects from a digital file, typically by adding material layer by layer, unlike traditional subtractive methods like machining." },
+
+            // 16. Design - Mohr's Circle
+            { query: /mohr's circle|what is mohr's circle/i, reply: "**Mohr's Circle** is a graphical method used in stress analysis to determine the stresses acting on an arbitrary plane, given the normal and shear stresses on two mutually perpendicular planes." },
+
+            // 17. Materials - Ductility/Brittleness
+            { query: /ductility and brittleness|define ductility|brittleness/i, reply: "**Ductility** is the ability of a material to deform plastically under tensile stress (e.g., drawing into a wire). **Brittleness** is the tendency to fracture without significant plastic deformation." },
+
+            // 18. Heat Transfer - Modes
+            { query: /modes of heat transfer|heat transfer modes/i, reply: "The three primary modes of heat transfer are: **Conduction** (transfer through stationary matter by molecular vibration), **Convection** (transfer through fluid movement), and **Radiation** (transfer via electromagnetic waves)." },
+
+            // 19. Vibrations - Natural Frequency
+            { query: /natural frequency|what is natural frequency/i, reply: "The **Natural Frequency** of a system is the frequency at which an object will oscillate if it is disturbed and then allowed to move freely. If an external force matches this frequency, resonance and potentially catastrophic failure can occur." },
+
+            // 20. Power Systems - Four-stroke engine
+            { query: /four-stroke engine|how four-stroke engine works/i, reply: "A **four-stroke engine** cycle includes four stages: 1. Intake (air/fuel drawn in), 2. Compression (piston moves up, squeezing mixture), 3. Power (ignition pushes piston down), and 4. Exhaust (spent gases pushed out)." },
+
+            // 21. Tools/Analysis - Finite Element Analysis (FEA)
+            { query: /finite element analysis|what is fea/i, reply: "**Finite Element Analysis (FEA)** is a computational method used to predict how a product reacts to real-world forces (like stress, heat, fluid flow, and vibration) by dividing a complex model into small, manageable elements." },
+
+        ];
+
+        // Function to get bot response
+        function getBotResponse(userText) {
+            const normalizedText = userText.toLowerCase().trim();
+            for (const item of responses) {
+                if (item.query.test(normalizedText)) {
+                    return item.reply;
+                }
+            }
+            return "I am currently limited to a few core Mechanical Engineering topics. Try asking about **Viscosity**, the **First Law**, **Factor of Safety**, or maybe **FEA** or **Natural Frequency**.";
+        }
+
+        // Function to create and display a chat message bubble
+        function displayMessage(text, sender) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            const bubble = document.createElement('div');
+            // Use the custom CSS classes defined in the style block
+            const bubbleClasses = sender === 'user' ? 'user-bubble' : 'bot-bubble';
+            
+            bubble.className = `max-w-xs md:max-w-md p-3 rounded-xl shadow-md ${bubbleClasses}`;
+            bubble.innerHTML = text; // Use innerHTML to allow for bolding in responses
+
+            messageContainer.appendChild(bubble);
+            chatHistory.appendChild(messageContainer);
+
+            // Scroll to the bottom to show the newest message
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Main function to handle user input
+        function handleChat() {
+            const userText = userInput.value.trim();
+            if (userText === '') return;
+
+            // 1. Display User Message
+            displayMessage(userText, 'user');
+            userInput.value = ''; // Clear input
+
+            // 2. Simulate typing and get Bot Response
+            // Simple delay for a better user experience
+            setTimeout(() => {
+                const botResponse = getBotResponse(userText);
+                displayMessage(botResponse, 'bot');
+            }, 700);
+        }
+
+        // --- Event Listeners ---
+
+        // Handle Send button click
+        sendBtn.addEventListener('click', handleChat);
+
+        // Handle Enter key press in the input field
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission behavior
+                handleChat();
+            }
+        });
+    </script>
+</body>
+</html>
